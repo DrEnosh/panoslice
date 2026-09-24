@@ -140,6 +140,7 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border-radius:50%;bac
 .ibtn:hover{color:var(--text);border-color:var(--hover)}
 .ibtn[aria-pressed=true]{background:var(--enamel);color:var(--enamel-ink);border-color:var(--enamel)}
 .ibtn svg{width:14px;height:14px}
+.vnote{position:absolute;left:50%;transform:translateX(-50%);top:40px;width:max-content;max-width:calc(100% - 24px);font-size:11.5px;line-height:1.4;color:var(--warn);background:rgba(10,14,17,.85);border:1px solid rgba(232,163,61,.35);border-radius:4px;padding:5px 9px;text-align:center;pointer-events:none}
 .vmsg{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;color:var(--muted);font-size:13px}
 .busy{position:absolute;left:0;right:0;top:0;height:2px;overflow:hidden;pointer-events:none;z-index:2}
 .busy::after{content:"";position:absolute;top:0;bottom:0;left:0;width:30%;background:var(--enamel);animation:slide 1s linear infinite}
@@ -256,6 +257,7 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border-radius:50%;bac
       </div>
       <div class="vhint">Drag to rotate · Shift-drag to pan · Scroll to zoom · Click to place the crosshair</div>
       <div id="gl-msg" class="vmsg" hidden></div>
+      <div id="gl-note" class="vnote" hidden></div>
     </section>
     <section class="view pane" id="pane-axial" data-key="axial" style="--c:var(--ax)"><canvas tabindex="0" aria-label="Axial slice. Click to move the crosshair, scroll or arrow keys to page through slices."></canvas><div class="vtag"><i></i>Axial</div><div class="vtools"><button type="button" class="ibtn max-btn" data-max="axial" aria-pressed="false" title="Maximise" aria-label="Maximise the axial slice"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M9.5 2.5h4v4M6.5 13.5h-4v-4M13.5 2.5 9 7M2.5 13.5 7 9"/></svg></button></div><div class="vinfo mono"></div></section>
     <section class="view pane" id="pane-coronal" data-key="coronal" style="--c:var(--co)"><canvas tabindex="0" aria-label="Coronal slice"></canvas><div class="vtag"><i></i>Coronal</div><div class="vtools"><button type="button" class="ibtn max-btn" data-max="coronal" aria-pressed="false" title="Maximise" aria-label="Maximise the coronal slice"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M9.5 2.5h4v4M6.5 13.5h-4v-4M13.5 2.5 9 7M2.5 13.5 7 9"/></svg></button></div><div class="vinfo mono"></div></section>
@@ -266,6 +268,6 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border-radius:50%;bac
 <div id="dropveil" class="dropveil" hidden><div>Drop the OPG to build its 3D model<small>PNG, JPEG or DICOM</small></div></div>
 <noscript><p style="padding:16px;color:#DCE6EA">PanoSlice needs JavaScript to build the 3D model in your browser.</p></noscript>
 <script type="application/json" id="teethnet-meta">{"in_h": 256, "in_w": 512, "input_offset": -0.5, "ch": [12, 24, 48, 96, 192], "val_dice": 0.9241190774146733, "epoch": 38, "layers": [{"cout": 12, "cin": 1, "k": 3, "w": 0, "b": 108}, {"cout": 12, "cin": 12, "k": 3, "w": 120, "b": 1416}, {"cout": 24, "cin": 12, "k": 3, "w": 1428, "b": 4020}, {"cout": 24, "cin": 24, "k": 3, "w": 4044, "b": 9228}, {"cout": 48, "cin": 24, "k": 3, "w": 9252, "b": 19620}, {"cout": 48, "cin": 48, "k": 3, "w": 19668, "b": 40404}, {"cout": 96, "cin": 48, "k": 3, "w": 40452, "b": 81924}, {"cout": 96, "cin": 96, "k": 3, "w": 82020, "b": 164964}, {"cout": 192, "cin": 96, "k": 3, "w": 165060, "b": 330948}, {"cout": 192, "cin": 192, "k": 3, "w": 331140, "b": 662916}, {"cout": 96, "cin": 288, "k": 3, "w": 663108, "b": 911940}, {"cout": 96, "cin": 96, "k": 3, "w": 912036, "b": 994980}, {"cout": 48, "cin": 144, "k": 3, "w": 995076, "b": 1057284}, {"cout": 48, "cin": 48, "k": 3, "w": 1057332, "b": 1078068}, {"cout": 24, "cin": 72, "k": 3, "w": 1078116, "b": 1093668}, {"cout": 24, "cin": 24, "k": 3, "w": 1093692, "b": 1098876}, {"cout": 12, "cin": 36, "k": 3, "w": 1098900, "b": 1102788}, {"cout": 12, "cin": 12, "k": 3, "w": 1102800, "b": 1104096}, {"cout": 1, "cin": 12, "k": 1, "w": 1104108, "b": 1104120}], "n_train": 96, "n_val": 20, "dataset": "SerdarHelli/SegmentationOfTeethPanoramicXRayImages (116 OPGs)", "src": "assets/teethnet.17b2452ba4.f16"}</script>
-<script src="assets/app.d22aae2aea.js"></script>
+<script src="assets/app.e5ada0b79d.js"></script>
 </body>
 </html>
