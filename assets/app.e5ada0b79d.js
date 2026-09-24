@@ -1129,7 +1129,7 @@ function planeGeom(key) {
 /* =====================================================================
    WebGL2 renderer
    ===================================================================== */
-const glc = $('#gl'), glov = $('#gl-ov'), govx = glov.getContext('2d');
+const glc = $('#gl'), glSoft = $('#gl-soft'), glov = $('#gl-ov'), govx = glov.getContext('2d');
 const FORCE_SOFT = /[?&]soft\b/.test(location.search);
 const gl = FORCE_SOFT ? null : glc.getContext('webgl2', { alpha: false, antialias: false, preserveDrawingBuffer: false });
 let prog, lineProg, vaoQuad, vaoLine, lineBuf, tex, U = {}, UL = {}, glOK = !!gl;
@@ -1174,8 +1174,8 @@ const vec3 AOK[12] = vec3[12](
   vec3(0.526,0.851,0.), vec3(-0.526,0.851,0.), vec3(0.526,-0.851,0.), vec3(-0.526,-0.851,0.),
   vec3(0.851,0.,0.526), vec3(-0.851,0.,0.526), vec3(0.851,0.,-0.526), vec3(-0.851,0.,-0.526));
 float ambOcc(vec3 p, vec3 n){
-  float o = 0.0, tot = 0.0; int ns = uHQ == 1 ? 12 : 6;
-  for (int i = 0; i < 12; i++){
+  float o = 0.0, tot = 0.0; int ns = uHQ == 1 ? 6 : 3;
+  for (int i = 0; i < 6; i++){
     if (i >= ns) break;
     vec3 d = normalize(n + 0.85 * AOK[i]);
     o += occ(p + d * 1.1) * 0.55 + occ(p + d * 2.8) * 0.45; tot += 1.0;
@@ -1184,8 +1184,8 @@ float ambOcc(vec3 p, vec3 n){
 }
 float shadow(vec3 p){
   if (uHQ == 0) return 1.0;
-  float res = 1.0, t = 0.9;
-  for (int i = 0; i < 40; i++){ if (t > 34.0 || res < 0.04) break; res *= 1.0 - 0.5 * occ(p + uKey * t); t += 0.55 + t * 0.05; }
+  float res = 1.0, t = 1.2;
+  for (int i = 0; i < 14; i++){ if (t > 32.0 || res < 0.05) break; res *= 1.0 - 0.5 * occ(p + uKey * t); t += 1.2 + t * 0.08; }
   return res;
 }
 vec3 light(vec3 p, vec3 n, vec3 V, vec3 alb, float specI, float specP, float wrap, float metal){
@@ -1250,7 +1250,7 @@ void main(){
     vec3 acc = vec3(0.0); float A = 0.0;
     bool inHard = false, inGum = false, first = true;
     float t = tn, prev = tn, prevG = 0.0;
-    for (int i = 0; i < 2400; i++) {
+    for (int i = 0; i < 600; i++) {
       if (t > tf || A > 0.985) break;
       vec3 p = ro + rd * t; vec4 s = T(p);
       bool hard = s.r >= uThr;
@@ -1294,7 +1294,7 @@ void main(){
   float t = tn + hash13(vec3(gl_FragCoord.xy, 1.0)) * uStep;
   if (uMode == 1) {
     vec3 acc = vec3(0.0); float A = 0.0;
-    for (int i = 0; i < 2400; i++) {
+    for (int i = 0; i < 600; i++) {
       if (t > tf || A > 0.98) break;
       vec3 p = ro + rd * t; vec4 s = T(p);
       float hard = smoothstep(uThr - 0.04, uThr + 0.2, s.r);
@@ -1318,7 +1318,7 @@ void main(){
     o = vec4(mix(BG, col, A), 1.0); return;
   }
   float sum = 0.0;
-  for (int i = 0; i < 2400; i++) { if (t > tf) break; vec4 s = T(ro + rd * t); sum += (s.r + 0.12 * s.b) * uStep; t += uStep; }
+  for (int i = 0; i < 600; i++) { if (t > tf) break; vec4 s = T(ro + rd * t); sum += (s.r + 0.12 * s.b) * uStep; t += uStep; }
   float g = smoothstep(0.12, 0.8, 1.0 - exp(-sum * 0.11));
   o = vec4(mix(vec3(0.02,0.025,0.03), vec3(0.93,0.95,0.97), g), 1.0);
 }`;
@@ -1335,10 +1335,16 @@ function compile(vs, fs) {
   if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
   return p;
 }
+let ctxListenersBound = false;
 function initGL() {
-  if (!gl) { glOK = false; softInit(); return; }
+  if (!gl) { glOK = false; softInit('Simplified 3D mode enabled.'); return; }
   try { prog = compile(VS_QUAD, FS_VOL); lineProg = compile(VS_LINE, FS_LINE); }
-  catch (e) { console.error(e); glOK = false; showGLMessage('The 3D renderer couldn’t start on this device. The slice views still work.'); return; }
+  catch (e) {
+    console.error(e);
+    glOK = false;
+    softInit('WebGL shader could not start. Switched to simplified 3D view.');
+    return;
+  }
   for (const n of ['uVol', 'uInvVP', 'uBMin', 'uBMax', 'uTexel', 'uKey', 'uClipN', 'uMode', 'uClipOn', 'uGums', 'uHQ', 'uThr', 'uStep', 'uBoneA', 'uGumA', 'uOpacity', 'uClipD']) U[n] = gl.getUniformLocation(prog, n);
   for (const n of ['uVP', 'uCol']) UL[n] = gl.getUniformLocation(lineProg, n);
   vaoQuad = gl.createVertexArray(); gl.bindVertexArray(vaoQuad);
@@ -1350,9 +1356,54 @@ function initGL() {
   gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
   gl.bindVertexArray(null);
   tex = gl.createTexture();
-  glc.addEventListener('webglcontextlost', e => { e.preventDefault(); glOK = false; showGLMessage('The 3D view lost its graphics context. Reload the page to restore it.'); });
+  glOK = true;
+  hideGLMessage();
+  if (!ctxListenersBound) {
+    ctxListenersBound = true;
+    glc.addEventListener('webglcontextlost', e => {
+      e.preventDefault();
+      glOK = false;
+      console.warn('WebGL context lost. Falling back to simplified 3D mode.');
+      softInit('Graphics context lost. Running in simplified 3D mode.');
+      request('gl', 'panes', 'opg', 'readout');
+    });
+    glc.addEventListener('webglcontextrestored', () => {
+      console.info('WebGL context restored. Re-enabling full renderer.');
+      try {
+        initGL();
+        if (state.vol) uploadVolume();
+        if (glSoft) glSoft.hidden = true;
+        glc.hidden = false;
+        soft = false;
+        const n = $('#gl-note'); if (n) n.hidden = true;
+        hideGLMessage();
+        request('gl', 'panes', 'opg', 'readout');
+      } catch (err) {
+        console.error('Context restore failed:', err);
+        softInit('Simplified 3D mode active.');
+        request('gl', 'panes', 'opg', 'readout');
+      }
+    });
+  }
 }
-function showGLMessage(msg) { const el = $('#gl-msg'); el.textContent = msg; el.hidden = false; }
+function showGLMessage(msg, btnText, onBtn) {
+  const el = $('#gl-msg');
+  if (!el) return;
+  el.innerHTML = '';
+  const p = document.createElement('p');
+  p.textContent = msg;
+  p.style.margin = '0 0 10px';
+  el.appendChild(p);
+  if (btnText && onBtn) {
+    const b = document.createElement('button');
+    b.className = 'btn primary small';
+    b.textContent = btnText;
+    b.onclick = onBtn;
+    el.appendChild(b);
+  }
+  el.hidden = false;
+}
+function hideGLMessage() { const el = $('#gl-msg'); if (el) el.hidden = true; }
 function uploadVolume() {
   if (!glOK) return;
   const V = state.vol;
@@ -1422,7 +1473,8 @@ function clipPlane(M) {
 function sizeGL() {
   const dpr = window.devicePixelRatio || 1;
   const area = Math.max(1, glc.clientWidth * glc.clientHeight);
-  const sc = state.moving ? Math.min(dpr, 1) * 0.7 : Math.min(dpr, 2, Math.sqrt(2.6e6 / area));
+  const maxPixels = state.moving ? 3.5e5 : 9.5e5;
+  const sc = Math.min(dpr, 1.5, Math.sqrt(maxPixels / area));
   const w = Math.max(1, Math.round(glc.clientWidth * sc)), h = Math.max(1, Math.round(glc.clientHeight * sc));
   if (glc.width !== w || glc.height !== h) { glc.width = w; glc.height = h; }
 }
@@ -1496,7 +1548,8 @@ function drawTriad(M, keep) {
 /* Click-to-pick: march the same ray on the CPU copy of the volume. */
 function pick3D(clientX, clientY) {
   const V = state.vol; if (!V) return null;
-  const r = glc.getBoundingClientRect(), M = camera(r.width / r.height);
+  const activeCv = (glSoft && !glSoft.hidden) ? glSoft : glc;
+  const r = activeCv.getBoundingClientRect(), M = camera(r.width / r.height);
   const nx = ((clientX - r.left) / r.width) * 2 - 1, ny = 1 - ((clientY - r.top) / r.height) * 2;
   const a = mulVec4(M.inv, [nx, ny, -1, 1]), b = mulVec4(M.inv, [nx, ny, 1, 1]);
   const ro = [a[0] / a[3], a[1] / a[3], a[2] / a[3]], rd = V3.norm(V3.sub([b[0] / b[3], b[1] / b[3], b[2] / b[3]], ro));
@@ -1523,11 +1576,27 @@ function pick3D(clientX, clientY) {
    ===================================================================== */
 let soft = false, softCtx = null, softPts = null, softKey = '', softImg = null, softZ = null;
 function softInit(reason) {
-  softCtx = glc.getContext('2d');
-  if (!softCtx) { showGLMessage('The 3D view can’t start in this browser. The slice views still work.'); return; }
+  if (!softCtx) {
+    if (glSoft) {
+      softCtx = glSoft.getContext('2d');
+      glSoft.hidden = false;
+      glc.hidden = true;
+    } else {
+      softCtx = glc.getContext('2d');
+    }
+  }
+  if (!softCtx) {
+    showGLMessage('The 3D view couldn’t start in this browser. Slices and panoramic views are active.', 'Reload page', () => location.reload());
+    return;
+  }
   soft = true;
-  const n = $('#gl-note'); n.hidden = false;
-  n.textContent = reason || 'Simplified 3D: this browser has WebGL 2 switched off. Turn on hardware acceleration in its settings for the full renderer.';
+  if (glSoft) { glSoft.hidden = false; glc.hidden = true; }
+  hideGLMessage();
+  const n = $('#gl-note');
+  if (n) {
+    n.hidden = false;
+    n.textContent = reason || 'Simplified 3D: this browser has WebGL 2 switched off. Turn on hardware acceleration in its settings for the full renderer.';
+  }
 }
 function extractSoftPoints() {
   const V = state.vol, R = state.render, T = Math.round(R.thr * 255);
@@ -1568,11 +1637,12 @@ function extractSoftPoints() {
 }
 const SOFT_COL = [[206, 104, 110], [214, 193, 158], [241, 234, 214], [176, 184, 196], [226, 204, 166]];
 function renderSoft3D() {
-  const V = state.vol; if (!V || !glc.clientWidth) return;
-  const area = glc.clientWidth * glc.clientHeight, dpr = window.devicePixelRatio || 1;
+  const target = (glSoft && !glSoft.hidden) ? glSoft : glc;
+  const V = state.vol; if (!V || !target.clientWidth) return;
+  const area = target.clientWidth * target.clientHeight, dpr = window.devicePixelRatio || 1;
   const sc = Math.min(dpr, Math.sqrt((state.moving ? 1.6e5 : 4.5e5) / Math.max(1, area)));
-  const w = Math.max(1, Math.round(glc.clientWidth * sc)), h = Math.max(1, Math.round(glc.clientHeight * sc));
-  if (glc.width !== w || glc.height !== h) { glc.width = w; glc.height = h; }
+  const w = Math.max(1, Math.round(target.clientWidth * sc)), h = Math.max(1, Math.round(target.clientHeight * sc));
+  if (target.width !== w || target.height !== h) { target.width = w; target.height = h; }
   if (!softImg || softImg.width !== w || softImg.height !== h) { softImg = softCtx.createImageData(w, h); softZ = new Float32Array(w * h); }
   const pts = extractSoftPoints(), R = state.render, M = camera(w / h), m = M.vp;
   const note = $('#gl-note'), msg = R.mode === 'surface' ? 'Simplified 3D: this browser has WebGL 2 switched off. Turn on hardware acceleration in its settings for the full renderer.' : 'X-ray and Volume views need WebGL 2, so the surface is shown instead. Turn on hardware acceleration in the browser settings.';
@@ -1850,10 +1920,22 @@ function request(...what) { what.forEach(w => dirty.add(w)); if (!raf) raf = req
 function frame() {
   raf = 0; if (!state.vol) { dirty.clear(); return; }
   const d = new Set(dirty); dirty.clear();
-  if (d.has('gl')) render3D();
-  if (d.has('panes')) panes.forEach(renderPane);
-  if (d.has('opg')) renderOPG();
-  if (d.has('readout')) renderReadout();
+  if (d.has('gl')) {
+    try { render3D(); }
+    catch (e) { console.error('3D render failed:', e); softInit('Switched to simplified 3D mode.'); }
+  }
+  if (d.has('panes')) {
+    try { panes.forEach(renderPane); }
+    catch (e) { console.error('Slice panes render failed:', e); }
+  }
+  if (d.has('opg')) {
+    try { renderOPG(); }
+    catch (e) { console.error('OPG render failed:', e); }
+  }
+  if (d.has('readout')) {
+    try { renderReadout(); }
+    catch (e) { console.error('Readout render failed:', e); }
+  }
 }
 let settleTimer = 0;
 function moving() { state.moving = true; clearTimeout(settleTimer); settleTimer = setTimeout(() => { state.moving = false; request('gl'); }, 180); }
@@ -1875,27 +1957,6 @@ const scheduleResize = () => { if (!resizeRaf) resizeRaf = requestAnimationFrame
    Interaction
    ===================================================================== */
 const ptrs = new Map(); let pinch0 = 0, down = null;
-glc.addEventListener('pointerdown', e => {
-  glc.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY, pan: e.shiftKey || e.button === 2 });
-  if (ptrs.size === 1) down = { x: e.clientX, y: e.clientY, t: performance.now(), moved: 0 };
-  if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch0 = Math.hypot(a.x - b.x, a.y - b.y); down = null; }
-});
-glc.addEventListener('pointermove', e => {
-  const p = ptrs.get(e.pointerId); if (!p || !state.vol) return;
-  const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY;
-  if (down) down.moved += Math.abs(dx) + Math.abs(dy);
-  if (down && down.moved < 4) return;
-  const c = state.cam;
-  if (ptrs.size === 2) {
-    const [a, b] = [...ptrs.values()], dd = Math.hypot(a.x - b.x, a.y - b.y);
-    if (pinch0 > 0 && dd > 0) c.zoom = clamp(c.zoom * pinch0 / dd, 0.25, 3); pinch0 = dd;
-  } else if (p.pan) {
-    const M = camera(glc.clientWidth / glc.clientHeight), v = M.view;
-    const k = 2 * M.dist * Math.tan(FOV / 2) / Math.max(1, glc.clientHeight);
-    c.pan = V3.add(c.pan, V3.add(V3.mul([v[0], v[4], v[8]], -dx * k), V3.mul([v[1], v[5], v[9]], dy * k)));
-  } else { c.yaw -= dx * 0.009; c.pitch = clamp(c.pitch + dy * 0.009, -1.45, 1.45); }
-  moving(); request('gl');
-});
 const endPtr = e => {
   const wasTap = down && ptrs.size === 1 && down.moved < 4 && performance.now() - down.t < 500 && e.type === 'pointerup' && e.button !== 2;
   ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch0 = 0;
@@ -1905,12 +1966,36 @@ const endPtr = e => {
   }
   if (!ptrs.size) down = null;
 };
-glc.addEventListener('pointerup', endPtr); glc.addEventListener('pointercancel', endPtr);
-glc.addEventListener('contextmenu', e => e.preventDefault());
-glc.addEventListener('wheel', e => { e.preventDefault(); state.cam.zoom = clamp(state.cam.zoom * Math.exp(e.deltaY * 0.0012), 0.25, 3); moving(); request('gl'); }, { passive: false });
-glc.addEventListener('keydown', e => {
-  const c = state.cam, k = { ArrowLeft: [0.12, 0], ArrowRight: [-0.12, 0], ArrowUp: [0, -0.1], ArrowDown: [0, 0.1] }[e.key];
-  if (!k) return; e.preventDefault(); c.yaw += k[0]; c.pitch = clamp(c.pitch + k[1], -1.45, 1.45); moving(); request('gl');
+[glc, glSoft].filter(Boolean).forEach(cv => {
+  cv.addEventListener('pointerdown', e => {
+    cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY, pan: e.shiftKey || e.button === 2 });
+    if (ptrs.size === 1) down = { x: e.clientX, y: e.clientY, t: performance.now(), moved: 0 };
+    if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch0 = Math.hypot(a.x - b.x, a.y - b.y); down = null; }
+  });
+  cv.addEventListener('pointermove', e => {
+    const p = ptrs.get(e.pointerId); if (!p || !state.vol) return;
+    const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY;
+    if (down) down.moved += Math.abs(dx) + Math.abs(dy);
+    if (down && down.moved < 4) return;
+    const c = state.cam;
+    if (ptrs.size === 2) {
+      const [a, b] = [...ptrs.values()], dd = Math.hypot(a.x - b.x, a.y - b.y);
+      if (pinch0 > 0 && dd > 0) c.zoom = clamp(c.zoom * pinch0 / dd, 0.25, 3); pinch0 = dd;
+    } else if (p.pan) {
+      const activeCv = (glSoft && !glSoft.hidden) ? glSoft : glc;
+      const M = camera(activeCv.clientWidth / activeCv.clientHeight), v = M.view;
+      const k = 2 * M.dist * Math.tan(FOV / 2) / Math.max(1, activeCv.clientHeight);
+      c.pan = V3.add(c.pan, V3.add(V3.mul([v[0], v[4], v[8]], -dx * k), V3.mul([v[1], v[5], v[9]], dy * k)));
+    } else { c.yaw -= dx * 0.009; c.pitch = clamp(c.pitch + dy * 0.009, -1.45, 1.45); }
+    moving(); request('gl');
+  });
+  cv.addEventListener('pointerup', endPtr); cv.addEventListener('pointercancel', endPtr);
+  cv.addEventListener('contextmenu', e => e.preventDefault());
+  cv.addEventListener('wheel', e => { e.preventDefault(); state.cam.zoom = clamp(state.cam.zoom * Math.exp(e.deltaY * 0.0012), 0.25, 3); moving(); request('gl'); }, { passive: false });
+  cv.addEventListener('keydown', e => {
+    const c = state.cam, k = { ArrowLeft: [0.12, 0], ArrowRight: [-0.12, 0], ArrowUp: [0, -0.1], ArrowDown: [0, 0.1] }[e.key];
+    if (!k) return; e.preventDefault(); c.yaw += k[0]; c.pitch = clamp(c.pitch + k[1], -1.45, 1.45); moving(); request('gl');
+  });
 });
 function resetView() { Object.assign(state.cam, { yaw: -0.5, pitch: 0.22, zoom: 1, pan: [0, 0, 0] }); request('gl'); }
 let spinRaf = 0, spinLast = 0;

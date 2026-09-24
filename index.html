@@ -124,11 +124,11 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border-radius:50%;bac
 /* ---------- viewports */
 .view{position:relative;background:#000;border:1px solid var(--line);border-top:2px solid var(--c,var(--line));border-radius:4px;overflow:hidden;min-height:0;min-width:0}
 .view canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
-.view.pane canvas{cursor:crosshair}
+.view.pane canvas{cursor:crosshair;background:var(--ground)}
 .views.measuring .view.pane canvas{cursor:copy}
-#gl{cursor:grab}
-#gl:active{cursor:grabbing}
-#gl-ov{pointer-events:none}
+#gl, #gl-soft{cursor:grab;background:var(--ground)}
+#gl:active, #gl-soft:active{cursor:grabbing}
+#gl-ov{pointer-events:none;background:transparent}
 .v3d{grid-area:v3d}
 #pane-axial{grid-area:ax} #pane-coronal{grid-area:co} #pane-sagittal{grid-area:sa} #pane-oblique{grid-area:ob}
 .vtag{position:absolute;left:8px;top:7px;display:flex;align-items:center;gap:6px;font:600 11px/1 var(--cond);letter-spacing:.1em;text-transform:uppercase;pointer-events:none;text-shadow:0 1px 2px #000}
@@ -141,7 +141,7 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border-radius:50%;bac
 .ibtn[aria-pressed=true]{background:var(--enamel);color:var(--enamel-ink);border-color:var(--enamel)}
 .ibtn svg{width:14px;height:14px}
 .vnote{position:absolute;left:50%;transform:translateX(-50%);top:40px;width:max-content;max-width:calc(100% - 24px);font-size:11.5px;line-height:1.4;color:var(--warn);background:rgba(10,14,17,.85);border:1px solid rgba(232,163,61,.35);border-radius:4px;padding:5px 9px;text-align:center;pointer-events:none}
-.vmsg{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;color:var(--muted);font-size:13px}
+.vmsg{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;color:var(--text);background:rgba(10,14,17,.92);font-size:13px;z-index:5}
 .busy{position:absolute;left:0;right:0;top:0;height:2px;overflow:hidden;pointer-events:none;z-index:2}
 .busy::after{content:"";position:absolute;top:0;bottom:0;left:0;width:30%;background:var(--enamel);animation:slide 1s linear infinite}
 @keyframes slide{from{transform:translateX(-100%)}to{transform:translateX(340%)}}
@@ -244,6 +244,7 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border-radius:50%;bac
   <main class="views" id="views" data-layout="quad">
     <section class="view v3d" id="v3d" data-key="3d" style="--c:var(--enamel)">
       <canvas id="gl" tabindex="0" aria-label="3D model. Drag to rotate, scroll to zoom, click to place the crosshair, arrow keys rotate."></canvas>
+      <canvas id="gl-soft" tabindex="0" aria-label="3D model. Drag to rotate, scroll to zoom, click to place the crosshair, arrow keys rotate." hidden></canvas>
       <canvas id="gl-ov" aria-hidden="true"></canvas>
       <div id="busy" class="busy" hidden></div>
       <div class="vtag"><i></i>3D</div>
